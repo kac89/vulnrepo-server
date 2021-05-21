@@ -2,6 +2,8 @@
 
 *Please note that this is just example how to integrate with VULNRΞPO. The server is intended for personal use!*
 
+API Reference: https://github.com/kac89/vulnrepo/blob/master/API-INTEGRATION.md
+
 The server was written in the go language, so make sure do you have it installed. https://golang.org/dl/
 
 ## How to start:
