@@ -10,12 +10,12 @@ The server was written in the go language, so make sure do you have it installed
 
 1. Clone this repository.
 ```
-git clone https://github.com/kac89/vulnrepo-server.git
+$ git clone https://github.com/kac89/vulnrepo-server.git
 ```
 
 2. Generate certificate (output put to /cert/ folder):
 ```
-openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 365
+$ openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 365
 ```
 Add certificate to your OS trusted store to avoid connection problems.
 
@@ -36,5 +36,10 @@ reports/
 
 5. Build binary:
 ```
-go build
+$ go build
+```
+
+6. RUN:
+```
+$ ./vulnrepo-server
 ```
