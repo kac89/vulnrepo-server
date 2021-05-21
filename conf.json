@@ -1,0 +1,6 @@
+{
+    "Server": {"host":"localhost", "port":"443"},
+    "Cert": {"cert":"cert/cert.crt", "certkey":"cert/cert.key"},
+    "Auth": {"apikey":"", "User":"Kacper Test", "CREATEDATE": "2021-05-11"},
+    "MAX_STORAGE": 1000000000
+}
