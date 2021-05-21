@@ -1,5 +1,7 @@
 # VULNRΞPO Server
 
+*Please note that this is just example how to integrate with VULNRΞPO. The server is intended for personal use!*
+
 The server was written in the go language, so make sure do you have it installed. https://golang.org/dl/
 
 ## How to start:
