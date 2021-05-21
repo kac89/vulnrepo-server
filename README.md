@@ -1,6 +1,6 @@
 # VULNRΞPO Server
 
-*Please note that this is just example how to integrate with VULNRΞPO. The server is intended for personal use!*
+*Please note that this is just example how to integrate with [VULNRΞPO](https://github.com/kac89/vulnrepo). The server is intended for personal use!*
 
 API Reference: https://github.com/kac89/vulnrepo/blob/master/API-INTEGRATION.md
 
@@ -13,7 +13,7 @@ The server was written in the go language, so make sure do you have it installed
 git clone https://github.com/kac89/vulnrepo-server.git
 ```
 
-2. Generate certificate:
+2. Generate certificate (output put to /cert/ folder):
 ```
 openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 365
 ```
