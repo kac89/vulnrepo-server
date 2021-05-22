@@ -17,7 +17,7 @@ $ git clone https://github.com/kac89/vulnrepo-server.git
 ```
 $ openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 365
 ```
-Add certificate to your OS trusted store to avoid connection problems.
+Add certificate to your OS browser trusted store to avoid connection problems like: '* remote error: tls: bad certificate*'
 
 3. Set your config.json (set your apikey i propose to use 'uuid v4' or 'uuid v5'):
 ```

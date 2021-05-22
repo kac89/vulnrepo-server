@@ -11,6 +11,8 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strings"
 )
 
 type Config struct {
@@ -49,6 +51,10 @@ func main() {
 		fmt.Println("error:", err)
 	}
 
+	if configuration.Auth.Apikey == "" {
+		log.Fatal("Empty api key, check conf.json!!!")
+	}
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/", sayHello)
 
@@ -69,6 +75,7 @@ func main() {
 		TLSConfig:    cfg,
 		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
 	}
+	fmt.Println("[*] SERVER START: if no errors at this point, should works fine :-)")
 	log.Fatal(srv.ListenAndServeTLS(configuration.Cert.Cert, configuration.Cert.Certkey))
 }
 
@@ -97,6 +104,11 @@ func DirSize(path string) (int64, error) {
 	return size, err
 }
 
+func IsValidUUID(uuid string) bool {
+	r := regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[8|9|aA|bB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$")
+	return r.MatchString(uuid)
+}
+
 func sayHello(w http.ResponseWriter, r *http.Request) {
 
 	file, _ := os.Open("conf.json")
@@ -106,10 +118,6 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 	err := decoder.Decode(&configuration)
 	if err != nil {
 		fmt.Println("error:", err)
-	}
-
-	if configuration.Auth.Apikey == "" {
-		log.Fatal("Empty api key, check conf.json!!!")
 	}
 
 	if err := r.ParseForm(); err != nil {
@@ -128,7 +136,6 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 	}
 
 	myAuth := r.Header.Get("Vulnrepo-Auth")
-
 	if configuration.Auth.Apikey == myAuth {
 
 		Action := r.Header.Get("Vulnrepo-Action")
@@ -145,24 +152,25 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 			}
 			reports := []Report{}
 			for _, f := range files {
-				dat, err := ioutil.ReadFile("./reports/" + f.Name())
-				if err != nil {
-					log.Fatal(err)
-				}
-
-				if dat != nil {
-
-					payload, err := url.QueryUnescape(string(dat))
+				if strings.Contains(f.Name(), ".vulnr") {
+					dat, err := ioutil.ReadFile("./reports/" + f.Name())
 					if err != nil {
-						panic(err)
+						log.Fatal(err)
 					}
-					data, err := base64.StdEncoding.DecodeString(string(payload))
-					if err != nil {
-						log.Fatal("error:", err)
+
+					if dat != nil {
+						payload, err := url.QueryUnescape(string(dat))
+						if err != nil {
+							panic(err)
+						}
+						data, err := base64.StdEncoding.DecodeString(string(payload))
+						if err != nil {
+							log.Fatal("error:", err)
+						}
+						var report Report
+						json.Unmarshal([]byte(data), &report)
+						reports = append(reports, report)
 					}
-					var report Report
-					json.Unmarshal([]byte(data), &report)
-					reports = append(reports, report)
 				}
 			}
 			w.WriteHeader(http.StatusOK)
@@ -267,7 +275,7 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 
 				reportid := payload_report.ReportID
 
-				if reportid != "" {
+				if reportid != "" && IsValidUUID(reportid) {
 
 					if len(files) > 0 {
 						for _, f := range files {
@@ -361,7 +369,7 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 
 				reportid := payload_report.ReportID
 
-				if reportid != "" {
+				if reportid != "" && IsValidUUID(reportid) {
 
 					if len(files) > 0 {
 						for _, f := range files {
