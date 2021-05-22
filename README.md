@@ -28,6 +28,7 @@ Add certificate to your OS browser trusted store to avoid connection problems li
     "MAX_STORAGE": 1000000000
 }
 ```
+MAX_STORAGE: 1000000000 bytes = 1 gigabyte.
 
 4. Set folder permissions (for write) 
 ```
