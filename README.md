@@ -19,7 +19,7 @@ $ openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -k
 ```
 Add certificate to your OS trusted store to avoid connection problems.
 
-3. Set your config.json:
+3. Set your config.json (set your apikey i propose to use 'uuid v4' or 'uuid v5'):
 ```
 {
     "Server": {"host":"localhost", "port":"443"},
