@@ -18,8 +18,11 @@ jobs:
       with:
         go-version: 1.18
 
+    - name: Set env
+      run: go env -w GO111MODULE=auto
+
     - name: Build
-      run: go env -w GO111MODULE=auto build
+      run: go build
 
     - name: Test
-      run: go env -w GO111MODULE=auto test
+      run: go test
