@@ -5,7 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -76,6 +75,7 @@ func main() {
 		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
 	}
 	fmt.Println("[*] SERVER START: if no errors at this point, should works fine :-)")
+	fmt.Println("[*] API URL: https://" + configuration.Server.Host + ":" + configuration.Server.Port)
 	log.Fatal(srv.ListenAndServeTLS(configuration.Cert.Cert, configuration.Cert.Certkey))
 }
 
@@ -146,14 +146,14 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 			dirsize, _ := DirSize("./reports")
 			fmt.Fprintf(w, `{"AUTH": "OK", "WELCOME": "`+configuration.Auth.User+`", "CREATEDATE": "`+configuration.Auth.CREATEDATE+`", "EXPIRYDATE": "0", "CURRENT_STORAGE": "`+fmt.Sprint(dirsize)+`", "MAX_STORAGE": "`+fmt.Sprint(configuration.MAXSTORAGE)+`"}`)
 		case "getreportslist":
-			files, err := ioutil.ReadDir("./reports/")
+			files, err := os.ReadDir("./reports/")
 			if err != nil {
 				log.Fatal(err)
 			}
 			reports := []Report{}
 			for _, f := range files {
 				if strings.Contains(f.Name(), ".vulnr") {
-					dat, err := ioutil.ReadFile("./reports/" + f.Name())
+					dat, err := os.ReadFile("./reports/" + f.Name())
 					if err != nil {
 						log.Fatal(err)
 					}
@@ -175,16 +175,16 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 			}
 			w.WriteHeader(http.StatusOK)
 			encjson, _ := json.Marshal(reports)
-			fmt.Fprintf(w, string(encjson))
+			fmt.Fprint(w, string(encjson))
 		case "getreport":
 			reportid := r.FormValue("reportid")
-			files, err := ioutil.ReadDir("./reports/")
+			files, err := os.ReadDir("./reports/")
 			if err != nil {
 				log.Fatal(err)
 			}
 			reports := []Report{}
 			for _, f := range files {
-				dat, err := ioutil.ReadFile("./reports/" + f.Name())
+				dat, err := os.ReadFile("./reports/" + f.Name())
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -208,17 +208,17 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 			}
 			w.WriteHeader(http.StatusOK)
 			encjson, _ := json.Marshal(reports)
-			fmt.Fprintf(w, string(encjson))
+			fmt.Fprint(w, string(encjson))
 
 		case "removereport":
 			reportid := r.FormValue("reportid")
-			files, err := ioutil.ReadDir("./reports/")
+			files, err := os.ReadDir("./reports/")
 			if err != nil {
 				log.Fatal(err)
 			}
 
 			for _, f := range files {
-				dat, err := ioutil.ReadFile("./reports/" + f.Name())
+				dat, err := os.ReadFile("./reports/" + f.Name())
 				if err != nil {
 					log.Fatal(err)
 				}
@@ -248,14 +248,17 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 		case "savereport":
 			reportdata := r.FormValue("reportdata")
 			isdir, _ := exists("./reports/")
-			files, err := ioutil.ReadDir("./reports/")
+			files, err := os.ReadDir("./reports/")
 			if err != nil {
 				log.Fatal(err)
 			}
 
 			if isdir {
 				//storage size
-				dirsize, err := DirSize("./reports")
+				dirsize, err01 := DirSize("./reports")
+				if err01 != nil {
+					log.Fatal(err01)
+				}
 				if dirsize > configuration.MAXSTORAGE {
 					w.WriteHeader(http.StatusOK)
 					fmt.Fprintf(w, `{"STORAGE": "NOSPACE"}`)
@@ -279,7 +282,7 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 
 					if len(files) > 0 {
 						for _, f := range files {
-							dat, err := ioutil.ReadFile("./reports/" + f.Name())
+							dat, err := os.ReadFile("./reports/" + f.Name())
 							if err != nil {
 								log.Fatal(err)
 							}
@@ -341,7 +344,7 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 		case "updatereport":
 			reportdata := r.FormValue("reportdata")
 			isdir, _ := exists("./reports/")
-			files, err := ioutil.ReadDir("./reports/")
+			files, err := os.ReadDir("./reports/")
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -349,7 +352,10 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 			if isdir {
 
 				//storage size
-				dirsize, err := DirSize("./reports")
+				dirsize, err23 := DirSize("./reports")
+				if err23 != nil {
+					log.Fatal(err23)
+				}
 				if dirsize > configuration.MAXSTORAGE {
 					w.WriteHeader(http.StatusOK)
 					fmt.Fprintf(w, `{"STORAGE": "NOSPACE"}`)
@@ -373,7 +379,7 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 
 					if len(files) > 0 {
 						for _, f := range files {
-							dat, err := ioutil.ReadFile("./reports/" + f.Name())
+							dat, err := os.ReadFile("./reports/" + f.Name())
 							if err != nil {
 								log.Fatal(err)
 							}
