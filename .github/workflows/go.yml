@@ -20,6 +20,9 @@ jobs:
 
     - name: Set env
       run: go env -w GO111MODULE=off
+      
+    - name: Set env
+      run: set GOARCH=amd64
 
     - name: Get goversioninfo
       run: go get github.com/josephspurrier/goversioninfo/cmd/goversioninfo
