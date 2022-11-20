@@ -15,8 +15,11 @@ jobs:
     - name: Set env
       run: go env -w GO111MODULE=off
       
-    - name: Set env
+    - name: Set env GOARCH
       run: set GOARCH=386
+      
+    - name: Set env GOOS
+      run: set GOOS=linux
 
     - name: Get goversioninfo
       run: go get github.com/josephspurrier/goversioninfo/cmd/goversioninfo
