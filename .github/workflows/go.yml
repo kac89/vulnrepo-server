@@ -38,3 +38,6 @@ jobs:
 
     - name: Test
       run: go test
+      
+    - name: ls
+      run: ls -la
