@@ -95,7 +95,7 @@ jobs:
       run: go generate
 
     - name: Build
-      run: go build
+      run: GOOS=windows GOARCH=amd64 go build
 
     - name: Test
       run: go test
@@ -106,7 +106,7 @@ jobs:
     - name: create rel dir
       run: mkdir release; cp vulnrepo-ser* release/; cp conf.json release/;cp README.* release/;cd release/;mkdir reports;mkdir cert;mkdir vulnrepo-app;
  
-    - name: Build project
+    - name: ZIP project
       run: |
           cd release/; zip vulnrepo *
     - name: ls
