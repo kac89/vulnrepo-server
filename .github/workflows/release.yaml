@@ -38,3 +38,13 @@ jobs:
       
     - name: ls
       run: ls -la
+ 
+    - name: create rel dir
+      run: mkdir release; cp vulnrepo-ser* /release/; cp config.json /release/;cp README.* /release/;cd release/;mkdir reports;mkdir cert;mkdir vulnrepo-app;
+ 
+    - name: Build project # This would actually build your project, using zip for an example artifact
+      run: |
+          cd release/; zip vulnrepo *
+    - name: ls
+      run: ls -la
+ 
