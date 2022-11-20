@@ -18,6 +18,9 @@ jobs:
       with:
         go-version: 1.18
 
+    - name: Set env
+      run: go env -w GO111MODULE=off
+
     - name: Get goversioninfo
       run: go get github.com/josephspurrier/goversioninfo/cmd/goversioninfo
       
