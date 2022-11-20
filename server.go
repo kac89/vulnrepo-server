@@ -1,10 +1,13 @@
+//go:generate goversioninfo -icon=testdata/resource/icon.ico -manifest=testdata/resource/goversioninfo.exe.manifest
 package main
 
 import (
+	"archive/zip"
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
@@ -12,6 +15,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
 type Config struct {
@@ -54,7 +58,28 @@ func main() {
 		log.Fatal("Empty api key, check conf.json!!!")
 	}
 
+	downloadFile("./vulnrepo-app-master.zip", "https://github.com/kac89/vulnrepo-build-prod/archive/refs/heads/master.zip")
+	Unzip("./vulnrepo-app-master", "./vulnrepo-app/")
+	// Removing file from the directory
+	// Using Remove() function
+	e := os.Remove("./vulnrepo-app-master.zip")
+	if e != nil {
+		log.Fatal(e)
+	}
 	mux := http.NewServeMux()
+
+	fileServer := http.FileServer(http.Dir("./vulnrepo-app/vulnrepo-build-prod-master/"))
+	mux.Handle("/", http.StripPrefix("/", fileServer))
+	mux.Handle("/home/", http.StripPrefix("/home", fileServer))
+	mux.Handle("/my-reports/", http.StripPrefix("/my-reports", fileServer))
+	mux.Handle("/report/", http.StripPrefix("/report", fileServer))
+	mux.Handle("/faq/", http.StripPrefix("/faq", fileServer))
+	mux.Handle("/settings/", http.StripPrefix("/settings", fileServer))
+	mux.Handle("/vuln-list/", http.StripPrefix("/vuln-list", fileServer))
+	mux.Handle("/import-report/", http.StripPrefix("/import-report", fileServer))
+	mux.Handle("/new-report/", http.StripPrefix("/new-report", fileServer))
+	//mux.Handle("/assets/", http.StripPrefix("/assets", fileServer))
+
 	mux.HandleFunc("/api/", sayHello)
 
 	cfg := &tls.Config{
@@ -74,9 +99,104 @@ func main() {
 		TLSConfig:    cfg,
 		TLSNextProto: make(map[string]func(*http.Server, *tls.Conn, http.Handler), 0),
 	}
+	fmt.Println("-=[***************************************************************]=-")
 	fmt.Println("[*] SERVER START: if no errors at this point, should works fine :-)")
+	fmt.Println("[*] VULNREPO APP: https://" + configuration.Server.Host + ":" + configuration.Server.Port)
 	fmt.Println("[*] API URL: https://" + configuration.Server.Host + ":" + configuration.Server.Port)
+	fmt.Println("-=[***************************************************************]=-")
+	fmt.Println("")
+	fmt.Println("")
+
 	log.Fatal(srv.ListenAndServeTLS(configuration.Cert.Cert, configuration.Cert.Certkey))
+}
+
+func downloadFile(filepath string, url string) (err error) {
+
+	// Create the file
+	out, err := os.Create(filepath)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	// Get the data
+	resp, err := http.Get(url)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Writer the body to file
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func Unzip(src, dest string) error {
+	r, err := zip.OpenReader(src)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := r.Close(); err != nil {
+			panic(err)
+		}
+	}()
+
+	os.MkdirAll(dest, 0755)
+
+	// Closure to address file descriptors issue with all the deferred .Close() methods
+	extractAndWriteFile := func(f *zip.File) error {
+		rc, err := f.Open()
+		if err != nil {
+			return err
+		}
+		defer func() {
+			if err := rc.Close(); err != nil {
+				panic(err)
+			}
+		}()
+
+		path := filepath.Join(dest, f.Name)
+
+		// Check for ZipSlip (Directory traversal)
+		if !strings.HasPrefix(path, filepath.Clean(dest)+string(os.PathSeparator)) {
+			return fmt.Errorf("illegal file path: %s", path)
+		}
+
+		if f.FileInfo().IsDir() {
+			os.MkdirAll(path, f.Mode())
+		} else {
+			os.MkdirAll(filepath.Dir(path), f.Mode())
+			f, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
+			if err != nil {
+				return err
+			}
+			defer func() {
+				if err := f.Close(); err != nil {
+					panic(err)
+				}
+			}()
+
+			_, err = io.Copy(f, rc)
+			if err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	for _, f := range r.File {
+		err := extractAndWriteFile(f)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func exists(path string) (bool, error) {
@@ -104,12 +224,34 @@ func DirSize(path string) (int64, error) {
 	return size, err
 }
 
+func logevent(event string) {
+	// If the file doesn't exist, create it, or append to the file
+	f, err := os.OpenFile("access.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if _, err := f.Write([]byte(event)); err != nil {
+		log.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		log.Fatal(err)
+	}
+}
+
 func IsValidUUID(uuid string) bool {
 	r := regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[8|9|aA|bB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$")
 	return r.MatchString(uuid)
 }
 
 func sayHello(w http.ResponseWriter, r *http.Request) {
+	currentTime := time.Now()
+	ip := r.RemoteAddr
+	xforward := r.Header.Get("X-Forwarded-For")
+	logevent(currentTime.Format("2006/01/02 15:04:05") + " | Connection from: " + ip + "\n")
+	fmt.Println(currentTime.Format("2006/01/02 15:04:05")+" | Connection from:", ip)
+	if xforward != "" {
+		fmt.Println("X-Forwarded-For : ", xforward)
+	}
 
 	file, _ := os.Open("conf.json")
 	defer file.Close()
