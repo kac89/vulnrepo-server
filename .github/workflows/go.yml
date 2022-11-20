@@ -29,9 +29,9 @@ jobs:
       
     - name: Install goversioninfo
       run: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo
-      
-    - name: Set env
-      run: go env -w GO111MODULE=auto
+
+    - name: Go Generate
+      run: go generate
 
     - name: Build
       run: go build
