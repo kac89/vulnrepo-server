@@ -42,7 +42,7 @@ jobs:
     - name: create rel dir
       run: mkdir release; cp vulnrepo-ser* release/; cp conf.json release/;cp README.* release/;cd release/;mkdir reports;mkdir cert;mkdir vulnrepo-app;
  
-    - name: Build project # This would actually build your project, using zip for an example artifact
+    - name: Build project
       run: |
           cd release/; zip vulnrepo *
     - name: ls
@@ -62,6 +62,70 @@ jobs:
       with:
         upload_url: ${{ steps.get_release.outputs.upload_url }}
         asset_path: ./release/vulnrepo.zip
-        asset_name: vulnrepo.zip
+        asset_name: vulnrepo-linux_386.zip
+        asset_content_type: application/zip
+ 
+  release-windows-amd64:
+    name: release windows/amd64
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: 1.18
+
+    - name: Set env
+      run: go env -w GO111MODULE=off
+      
+    - name: Set env GOARCH
+      run: set GOARCH=amd64
+      
+    - name: Set env GOOS
+      run: set GOOS=windows
+
+    - name: Get goversioninfo
+      run: go get github.com/josephspurrier/goversioninfo/cmd/goversioninfo
+      
+    - name: Install goversioninfo
+      run: go install github.com/josephspurrier/goversioninfo/cmd/goversioninfo
+
+    - name: Go Generate
+      run: go generate
+
+    - name: Build
+      run: go build
+
+    - name: Test
+      run: go test
+      
+    - name: ls
+      run: ls -la
+ 
+    - name: create rel dir
+      run: mkdir release; cp vulnrepo-ser* release/; cp conf.json release/;cp README.* release/;cd release/;mkdir reports;mkdir cert;mkdir vulnrepo-app;
+ 
+    - name: Build project
+      run: |
+          cd release/; zip vulnrepo *
+    - name: ls
+      run: cd release/;ls -la
+      
+    - name: Get release
+      id: get_release
+      uses: bruceadams/get-release@v1.3.2
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+    - name: Upload Release Asset
+      id: upload-release-asset 
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.get_release.outputs.upload_url }}
+        asset_path: ./release/vulnrepo.zip
+        asset_name: vulnrepo-windows_amd64.zip
         asset_content_type: application/zip
  
