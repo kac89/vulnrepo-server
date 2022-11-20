@@ -1,4 +1,4 @@
-//go:generate goversioninfo -icon=testdata/resource/icon.ico -manifest=testdata/resource/goversioninfo.exe.manifest
+//go:generate goversioninfo -icon=testdata/resource/icon.ico -manifest=testdata/resource/goversioninfo.exe.manifest -64=true
 package main
 
 import (
