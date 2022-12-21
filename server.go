@@ -1,4 +1,3 @@
-//go:generate goversioninfo -icon=testdata/resource/icon.ico -manifest=testdata/resource/goversioninfo.exe.manifest -64=true
 package main
 
 import (
@@ -32,7 +31,8 @@ type Config struct {
 		User       string `json:"User"`
 		CREATEDATE string `json:"CREATEDATE"`
 	} `json:"Auth"`
-	MAXSTORAGE int64 `json:"MAX_STORAGE"`
+	MAXSTORAGE           int64 `json:"MAX_STORAGE"`
+	DOWNLOAD_VULNREPOAPP bool  `json:"DOWNLOAD_VULNREPOAPP"`
 }
 
 type Report struct {
@@ -45,7 +45,13 @@ type Report struct {
 
 func main() {
 
-	file, _ := os.Open("conf.json")
+	ex, err2 := os.Executable()
+	if err2 != nil {
+		panic(err2)
+	}
+	exPath := filepath.Dir(ex) + "/"
+
+	file, _ := os.Open(exPath + "conf.json")
 	defer file.Close()
 	decoder := json.NewDecoder(file)
 	configuration := Config{}
@@ -58,27 +64,32 @@ func main() {
 		log.Fatal("Empty api key, check conf.json!!!")
 	}
 
-	downloadFile("./vulnrepo-app-master.zip", "https://github.com/kac89/vulnrepo-build-prod/archive/refs/heads/master.zip")
-	Unzip("./vulnrepo-app-master", "./vulnrepo-app/")
-	// Removing file from the directory
-	// Using Remove() function
-	e := os.Remove("./vulnrepo-app-master.zip")
-	if e != nil {
-		log.Fatal(e)
-	}
 	mux := http.NewServeMux()
 
-	fileServer := http.FileServer(http.Dir("./vulnrepo-app/vulnrepo-build-prod-master/"))
-	mux.Handle("/", http.StripPrefix("/", fileServer))
-	mux.Handle("/home/", http.StripPrefix("/home", fileServer))
-	mux.Handle("/my-reports/", http.StripPrefix("/my-reports", fileServer))
-	mux.Handle("/report/", http.StripPrefix("/report", fileServer))
-	mux.Handle("/faq/", http.StripPrefix("/faq", fileServer))
-	mux.Handle("/settings/", http.StripPrefix("/settings", fileServer))
-	mux.Handle("/vuln-list/", http.StripPrefix("/vuln-list", fileServer))
-	mux.Handle("/import-report/", http.StripPrefix("/import-report", fileServer))
-	mux.Handle("/new-report/", http.StripPrefix("/new-report", fileServer))
-	//mux.Handle("/assets/", http.StripPrefix("/assets", fileServer))
+	if configuration.DOWNLOAD_VULNREPOAPP {
+
+		downloadFile(exPath+"vulnrepo-app-master.zip", "https://github.com/kac89/vulnrepo-build-prod/archive/refs/heads/master.zip")
+		Unzip(exPath+"vulnrepo-app-master.zip", exPath+"vulnrepo-app/")
+		// Removing file from the directory
+		// Using Remove() function
+		e := os.Remove(exPath + "vulnrepo-app-master.zip")
+		if e != nil {
+			log.Fatal(e)
+		}
+
+		fileServer := http.FileServer(http.Dir("./vulnrepo-app/vulnrepo-build-prod-master/"))
+		mux.Handle("/", http.StripPrefix("/", fileServer))
+		mux.Handle("/home/", http.StripPrefix("/home", fileServer))
+		mux.Handle("/my-reports/", http.StripPrefix("/my-reports", fileServer))
+		mux.Handle("/report/", http.StripPrefix("/report", fileServer))
+		mux.Handle("/faq/", http.StripPrefix("/faq", fileServer))
+		mux.Handle("/settings/", http.StripPrefix("/settings", fileServer))
+		mux.Handle("/vuln-list/", http.StripPrefix("/vuln-list", fileServer))
+		mux.Handle("/import-report/", http.StripPrefix("/import-report", fileServer))
+		mux.Handle("/new-report/", http.StripPrefix("/new-report", fileServer))
+		//mux.Handle("/assets/", http.StripPrefix("/assets", fileServer))
+
+	}
 
 	mux.HandleFunc("/api/", sayHello)
 
@@ -102,7 +113,9 @@ func main() {
 	fmt.Println("-=[***************************************************************]=-")
 	fmt.Println("[*] SERVER START: if no errors at this point, should works fine :-)")
 	fmt.Println("[*] VULNREPO APP: https://" + configuration.Server.Host + ":" + configuration.Server.Port)
-	fmt.Println("[*] API URL: https://" + configuration.Server.Host + ":" + configuration.Server.Port)
+	if configuration.DOWNLOAD_VULNREPOAPP {
+		fmt.Println("[*] API URL: https://" + configuration.Server.Host + ":" + configuration.Server.Port)
+	}
 	fmt.Println("-=[***************************************************************]=-")
 	fmt.Println("")
 	fmt.Println("")
@@ -287,6 +300,8 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 			//storage size
 			dirsize, _ := DirSize("./reports")
 			fmt.Fprintf(w, `{"AUTH": "OK", "WELCOME": "`+configuration.Auth.User+`", "CREATEDATE": "`+configuration.Auth.CREATEDATE+`", "EXPIRYDATE": "0", "CURRENT_STORAGE": "`+fmt.Sprint(dirsize)+`", "MAX_STORAGE": "`+fmt.Sprint(configuration.MAXSTORAGE)+`"}`)
+			logevent(currentTime.Format("2006/01/02 15:04:05") + " | apiconnect from: " + ip + "\n")
+			fmt.Println(currentTime.Format("2006/01/02 15:04:05")+" | apiconnect from:", ip)
 		case "getreportslist":
 			files, err := os.ReadDir("./reports/")
 			if err != nil {
@@ -318,6 +333,8 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			encjson, _ := json.Marshal(reports)
 			fmt.Fprint(w, string(encjson))
+			logevent(currentTime.Format("2006/01/02 15:04:05") + " | getreportslist from: " + ip + "\n")
+			fmt.Println(currentTime.Format("2006/01/02 15:04:05")+" | getreportslist from:", ip)
 		case "getreport":
 			reportid := r.FormValue("reportid")
 			files, err := os.ReadDir("./reports/")
@@ -351,7 +368,8 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			encjson, _ := json.Marshal(reports)
 			fmt.Fprint(w, string(encjson))
-
+			logevent(currentTime.Format("2006/01/02 15:04:05") + " | getreport from: " + ip + "\n")
+			fmt.Println(currentTime.Format("2006/01/02 15:04:05")+" | getreport from:", ip)
 		case "removereport":
 			reportid := r.FormValue("reportid")
 			files, err := os.ReadDir("./reports/")
@@ -387,6 +405,8 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
+			logevent(currentTime.Format("2006/01/02 15:04:05") + " | removereport from: " + ip + "\n")
+			fmt.Println(currentTime.Format("2006/01/02 15:04:05")+" | removereport from:", ip)
 		case "savereport":
 			reportdata := r.FormValue("reportdata")
 			isdir, _ := exists("./reports/")
@@ -482,7 +502,8 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 				}
 
 			}
-
+			logevent(currentTime.Format("2006/01/02 15:04:05") + " | savereport from: " + ip + "\n")
+			fmt.Println(currentTime.Format("2006/01/02 15:04:05")+" | savereport from:", ip)
 		case "updatereport":
 			reportdata := r.FormValue("reportdata")
 			isdir, _ := exists("./reports/")
@@ -561,6 +582,8 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 				}
 
 			}
+			logevent(currentTime.Format("2006/01/02 15:04:05") + " | updatereport from: " + ip + "\n")
+			fmt.Println(currentTime.Format("2006/01/02 15:04:05")+" | updatereport from:", ip)
 		default:
 			fmt.Fprintf(w, "Sorry, missing action")
 		}
