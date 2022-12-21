@@ -25,10 +25,13 @@ Add certificate to your OS browser trusted store to avoid connection problems li
     "Server": {"host":"localhost", "port":"443"},
     "Cert": {"cert":"cert/cert.crt", "certkey":"cert/cert.key"},
     "Auth": {"apikey":"", "User":"Kacper Test", "CREATEDATE": "2021-05-11"},
-    "MAX_STORAGE": 1000000000
+    "MAX_STORAGE": 1000000000,
+    "DOWNLOAD_VULNREPOAPP": false
 }
 ```
 MAX_STORAGE: 1000000000 bytes = 1 gigabyte.
+
+DOWNLOAD_VULNREPOAPP if set true, the vulnrepo application will be downloaded and launched locally on the server.
 
 4. Set folder permissions (for write) 
 ```
