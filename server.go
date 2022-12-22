@@ -259,12 +259,8 @@ func IsValidUUID(uuid string) bool {
 func sayHello(w http.ResponseWriter, r *http.Request) {
 	currentTime := time.Now()
 	ip := r.RemoteAddr
-	xforward := r.Header.Get("X-Forwarded-For")
 	logevent(currentTime.Format("2006/01/02 15:04:05") + " | Connection from: " + ip + "\n")
 	fmt.Println(currentTime.Format("2006/01/02 15:04:05")+" | Connection from:", ip)
-	if xforward != "" {
-		fmt.Println("X-Forwarded-For : ", xforward)
-	}
 
 	file, _ := os.Open("conf.json")
 	defer file.Close()
