@@ -43,6 +43,30 @@ type Report struct {
 	EncryptedData    string `json:"encrypted_data"`
 }
 
+type ReportProfile []struct {
+	ProfileName              string `json:"profile_name"`
+	ReportCSS                string `json:"report_css"`
+	ReportCustomContent      string `json:"report_custom_content"`
+	Logo                     string `json:"logo"`
+	Logow                    int    `json:"logow"`
+	Logoh                    int    `json:"logoh"`
+	Theme                    string `json:"theme"`
+	VideoEmbed               bool   `json:"video_embed"`
+	RemoveLastpage           bool   `json:"remove_lastpage"`
+	RemoveIssueStatus        bool   `json:"remove_issueStatus"`
+	RemoveIssuecvss          bool   `json:"remove_issuecvss"`
+	RemoveIssuecve           bool   `json:"remove_issuecve"`
+	RemoveResearcher         bool   `json:"remove_researcher"`
+	RemoveChangelog          bool   `json:"remove_changelog"`
+	RemoveTags               bool   `json:"remove_tags"`
+	ReportParsingDesc        bool   `json:"report_parsing_desc"`
+	ReportParsingPocMarkdown bool   `json:"report_parsing_poc_markdown"`
+	ResName                  string `json:"ResName"`
+	ResEmail                 string `json:"ResEmail"`
+	ResSocial                string `json:"ResSocial"`
+	ResWeb                   string `json:"ResWeb"`
+}
+
 func main() {
 
 	ex, err2 := os.Executable()
@@ -251,16 +275,24 @@ func logevent(event string) {
 	}
 }
 
+func logme(event string) {
+	currentTime := time.Now()
+	logevent(currentTime.Format("2006/01/02 15:04:05") + event + "\n")
+	fmt.Println(currentTime.Format("2006/01/02 15:04:05") + event)
+}
+
 func IsValidUUID(uuid string) bool {
 	r := regexp.MustCompile("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-4[a-fA-F0-9]{3}-[8|9|aA|bB][a-fA-F0-9]{3}-[a-fA-F0-9]{12}$")
 	return r.MatchString(uuid)
 }
 
 func sayHello(w http.ResponseWriter, r *http.Request) {
-	currentTime := time.Now()
 	ip := r.RemoteAddr
-	logevent(currentTime.Format("2006/01/02 15:04:05") + " | Connection from: " + ip + "\n")
-	fmt.Println(currentTime.Format("2006/01/02 15:04:05")+" | Connection from:", ip)
+	xforward := r.Header.Get("X-Forwarded-For")
+	logme(" | Connection from " + ip)
+	if xforward != "" {
+		fmt.Println("X-Forwarded-For : ", xforward)
+	}
 
 	file, _ := os.Open("conf.json")
 	defer file.Close()
@@ -296,8 +328,7 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 			//storage size
 			dirsize, _ := DirSize("./reports")
 			fmt.Fprintf(w, `{"AUTH": "OK", "WELCOME": "`+configuration.Auth.User+`", "CREATEDATE": "`+configuration.Auth.CREATEDATE+`", "EXPIRYDATE": "0", "CURRENT_STORAGE": "`+fmt.Sprint(dirsize)+`", "MAX_STORAGE": "`+fmt.Sprint(configuration.MAXSTORAGE)+`"}`)
-			logevent(currentTime.Format("2006/01/02 15:04:05") + " | apiconnect from: " + ip + "\n")
-			fmt.Println(currentTime.Format("2006/01/02 15:04:05")+" | apiconnect from:", ip)
+			logme(" | apiconnect from: " + ip)
 		case "getreportslist":
 			files, err := os.ReadDir("./reports/")
 			if err != nil {
@@ -329,8 +360,9 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			encjson, _ := json.Marshal(reports)
 			fmt.Fprint(w, string(encjson))
-			logevent(currentTime.Format("2006/01/02 15:04:05") + " | getreportslist from: " + ip + "\n")
-			fmt.Println(currentTime.Format("2006/01/02 15:04:05")+" | getreportslist from:", ip)
+
+			logme(" | getreportslist from: " + ip)
+
 		case "getreport":
 			reportid := r.FormValue("reportid")
 			files, err := os.ReadDir("./reports/")
@@ -364,8 +396,9 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			encjson, _ := json.Marshal(reports)
 			fmt.Fprint(w, string(encjson))
-			logevent(currentTime.Format("2006/01/02 15:04:05") + " | getreport from: " + ip + "\n")
-			fmt.Println(currentTime.Format("2006/01/02 15:04:05")+" | getreport from:", ip)
+
+			logme(" | getreport from: " + ip)
+
 		case "removereport":
 			reportid := r.FormValue("reportid")
 			files, err := os.ReadDir("./reports/")
@@ -401,8 +434,9 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
-			logevent(currentTime.Format("2006/01/02 15:04:05") + " | removereport from: " + ip + "\n")
-			fmt.Println(currentTime.Format("2006/01/02 15:04:05")+" | removereport from:", ip)
+
+			logme(" | removereport from: " + ip)
+
 		case "savereport":
 			reportdata := r.FormValue("reportdata")
 			isdir, _ := exists("./reports/")
@@ -498,8 +532,9 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 				}
 
 			}
-			logevent(currentTime.Format("2006/01/02 15:04:05") + " | savereport from: " + ip + "\n")
-			fmt.Println(currentTime.Format("2006/01/02 15:04:05")+" | savereport from:", ip)
+
+			logme(" | savereport from: " + ip)
+
 		case "updatereport":
 			reportdata := r.FormValue("reportdata")
 			isdir, _ := exists("./reports/")
@@ -578,8 +613,36 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 				}
 
 			}
-			logevent(currentTime.Format("2006/01/02 15:04:05") + " | updatereport from: " + ip + "\n")
-			fmt.Println(currentTime.Format("2006/01/02 15:04:05")+" | updatereport from:", ip)
+
+			logme(" | updatereport from: " + ip)
+
+		case "getreportprofiles":
+			files, err := os.ReadDir("./profiles/")
+			if err != nil {
+				log.Fatal(err)
+			}
+			reportprofiles := ReportProfile{}
+			for _, f := range files {
+				if strings.Contains(f.Name(), ".json") {
+					dat, err := os.ReadFile("./profiles/" + f.Name())
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					if dat != nil {
+
+						data := string(dat)
+						var profile ReportProfile
+						json.Unmarshal([]byte(data), &profile)
+						reportprofiles = append(reportprofiles, profile...)
+					}
+				}
+			}
+			w.WriteHeader(http.StatusOK)
+			encjson, _ := json.Marshal(reportprofiles)
+			fmt.Fprint(w, string(encjson))
+
+			logme(" | getreportprofiles from: " + ip)
 		default:
 			fmt.Fprintf(w, "Sorry, missing action")
 		}
