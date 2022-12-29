@@ -1,0 +1,1 @@
+/profiles/ folder should contain .json vulnrepo profile settings.
