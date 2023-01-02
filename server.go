@@ -288,11 +288,12 @@ func IsValidUUID(uuid string) bool {
 
 func sayHello(w http.ResponseWriter, r *http.Request) {
 	ip := r.RemoteAddr
-	xforward := r.Header.Get("X-Forwarded-For")
+	
 	logme(" | Connection from " + ip)
-	if xforward != "" {
-		fmt.Println("X-Forwarded-For : ", xforward)
-	}
+	//xforward := r.Header.Get("X-Forwarded-For")
+	//if xforward != "" {
+	//	fmt.Println("X-Forwarded-For : ", xforward)
+	//}
 
 	file, _ := os.Open("conf.json")
 	defer file.Close()
