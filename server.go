@@ -43,6 +43,13 @@ type Report struct {
 	EncryptedData    string `json:"encrypted_data"`
 }
 
+type ListReports struct {
+	ReportID         string `json:"report_id"`
+	ReportName       string `json:"report_name"`
+	ReportCreatedate int64  `json:"report_createdate"`
+	ReportLastupdate int64  `json:"report_lastupdate"`
+}
+
 type ReportProfile []struct {
 	ProfileName              string `json:"profile_name"`
 	ReportCSS                string `json:"report_css"`
@@ -136,9 +143,8 @@ func main() {
 	}
 	fmt.Println("-=[***************************************************************]=-")
 	fmt.Println("[*] SERVER START: if no errors at this point, should works fine :-)")
-	fmt.Println("[*] VULNREPO APP: https://" + configuration.Server.Host + ":" + configuration.Server.Port)
 	if configuration.DOWNLOAD_VULNREPOAPP {
-		fmt.Println("[*] API URL: https://" + configuration.Server.Host + ":" + configuration.Server.Port)
+		fmt.Println("[*] VULNREPO APP: https://" + configuration.Server.Host + ":" + configuration.Server.Port)
 	}
 	fmt.Println("-=[***************************************************************]=-")
 	fmt.Println("")
@@ -288,12 +294,11 @@ func IsValidUUID(uuid string) bool {
 
 func sayHello(w http.ResponseWriter, r *http.Request) {
 	ip := r.RemoteAddr
-	
+	xforward := r.Header.Get("X-Forwarded-For")
 	logme(" | Connection from " + ip)
-	//xforward := r.Header.Get("X-Forwarded-For")
-	//if xforward != "" {
-	//	fmt.Println("X-Forwarded-For : ", xforward)
-	//}
+	if xforward != "" {
+		fmt.Println("X-Forwarded-For : ", xforward)
+	}
 
 	file, _ := os.Open("conf.json")
 	defer file.Close()
@@ -335,7 +340,7 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			reports := []Report{}
+			reports := []ListReports{}
 			for _, f := range files {
 				if strings.Contains(f.Name(), ".vulnr") {
 					dat, err := os.ReadFile("./reports/" + f.Name())
@@ -352,9 +357,10 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 						if err != nil {
 							log.Fatal("error:", err)
 						}
-						var report Report
-						json.Unmarshal([]byte(data), &report)
-						reports = append(reports, report)
+						var reportsin ListReports
+						json.Unmarshal([]byte(data), &reportsin)
+
+						reports = append(reports, reportsin)
 					}
 				}
 			}
