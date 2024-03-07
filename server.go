@@ -57,7 +57,6 @@ type ReportProfile []struct {
 	Logo                     string `json:"logo"`
 	Logow                    int    `json:"logow"`
 	Logoh                    int    `json:"logoh"`
-	Theme                    string `json:"theme"`
 	VideoEmbed               bool   `json:"video_embed"`
 	RemoveLastpage           bool   `json:"remove_lastpage"`
 	RemoveIssueStatus        bool   `json:"remove_issueStatus"`
@@ -68,10 +67,23 @@ type ReportProfile []struct {
 	RemoveTags               bool   `json:"remove_tags"`
 	ReportParsingDesc        bool   `json:"report_parsing_desc"`
 	ReportParsingPocMarkdown bool   `json:"report_parsing_poc_markdown"`
+	ReportRemoveAttachName   bool   `json:"report_remove_attach_name"`
 	ResName                  string `json:"ResName"`
 	ResEmail                 string `json:"ResEmail"`
 	ResSocial                string `json:"ResSocial"`
 	ResWeb                   string `json:"ResWeb"`
+}
+
+type ReportTemplate []struct {
+	Title      string `json:"title"`
+	Poc        string `json:"poc"`
+	Desc       string `json:"desc"`
+	Severity   string `json:"severity"`
+	Ref        string `json:"ref"`
+	Cvss       string `json:"cvss"`
+	CvssVector string `json:"cvss_vector"`
+	Cve        string `json:"cve"`
+	Tags       []any  `json:"tags"`
 }
 
 func main() {
@@ -630,7 +642,7 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 			}
 			reportprofiles := ReportProfile{}
 			for _, f := range files {
-				if strings.Contains(f.Name(), ".json") {
+				if strings.Contains(f.Name(), ".vulnrepo-profiles") {
 					dat, err := os.ReadFile("./profiles/" + f.Name())
 					if err != nil {
 						log.Fatal(err)
@@ -650,6 +662,35 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprint(w, string(encjson))
 
 			logme(" | getreportprofiles from: " + ip)
+
+		case "getreporttemplates":
+			files, err := os.ReadDir("./templates/")
+			if err != nil {
+				log.Fatal(err)
+			}
+			reporttemplates := ReportTemplate{}
+			for _, f := range files {
+				if strings.Contains(f.Name(), ".vulnrepo-templates") {
+					dat, err := os.ReadFile("./templates/" + f.Name())
+					if err != nil {
+						log.Fatal(err)
+					}
+
+					if dat != nil {
+
+						data := string(dat)
+						var template ReportTemplate
+						json.Unmarshal([]byte(data), &template)
+						reporttemplates = append(reporttemplates, template...)
+					}
+				}
+			}
+			w.WriteHeader(http.StatusOK)
+			encjson, _ := json.Marshal(reporttemplates)
+			fmt.Fprint(w, string(encjson))
+
+			logme(" | getreporttemplates from: " + ip)
+
 		default:
 			fmt.Fprintf(w, "Sorry, missing action")
 		}
