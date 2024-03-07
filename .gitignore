@@ -1,7 +1,7 @@
 /cert/*
 /profiles/*
 /reports/*
-!/templates/*
+/templates/*
 /vulnrepo-app/*
 
 access.log
