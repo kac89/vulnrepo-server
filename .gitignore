@@ -1,0 +1,8 @@
+/cert/*
+/profiles/*
+/reports/*
+/templates/*
+/vulnrepo-app/*
+
+access.log
+config.json
