@@ -6,3 +6,4 @@
 
 access.log
 conf.json
+*.exe
