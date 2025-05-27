@@ -1,8 +1,7 @@
 FROM alpine:latest AS build
 
-RUN apk add git
-RUN git clone https://github.com/kac89/vulnrepo-server.git
 WORKDIR /vulnrepo-server
+COPY . .
 
 RUN apk add --no-cache git make musl-dev go
 
@@ -15,9 +14,7 @@ RUN mkdir -p ${GOPATH}/src ${GOPATH}/bin
 #Build vulnrepo-server
 RUN go build vulnrepo-server.go
 
-#EXPOSE 8080
-
-#RUN echo $(ls -la)
+EXPOSE 443
 
 # Run
 CMD ["/vulnrepo-server/vulnrepo-server"]

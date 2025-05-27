@@ -24,7 +24,7 @@ Add certificate to your OS browser trusted store to avoid connection problems li
 {
     "Server": {"host":"localhost", "port":"443"},
     "Cert": {"cert":"cert/cert.crt", "certkey":"cert/cert.key"},
-    "Auth": {"apikey":"", "User":"Kacper Test", "CREATEDATE": "2021-05-11"},
+    "Auth": [{"apikey":"", "User":"Kacper Test", "CREATEDATE": "2021-05-11"}],
     "MAX_STORAGE": 1000000000,
     "DOWNLOAD_VULNREPOAPP": false
 }
@@ -47,3 +47,21 @@ $ go build
 ```
 $ ./vulnrepo-server
 ```
+
+## For Docker:
+
+0. Prepare certificates in /cert/ folder.
+```
+$ openssl req -new -x509 -nodes -newkey ec:<(openssl ecparam -name secp384r1) -keyout cert.key -out cert.crt -days 365
+```
+
+1. Build:
+```
+$ docker build -t vulnrepo-server .
+```
+
+2. Run:
+```
+$ docker run -it -p 443:443 vulnrepo-server
+```
+
