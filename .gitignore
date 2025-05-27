@@ -5,5 +5,4 @@
 /vulnrepo-app/*
 
 access.log
-conf.json
-*.exe
+config.json

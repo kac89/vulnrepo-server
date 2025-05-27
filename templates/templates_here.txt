@@ -1,1 +1,1 @@
-
+/templates/ folder should contain .vulnrepo-templates files.

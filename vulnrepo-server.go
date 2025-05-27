@@ -7,7 +7,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -26,12 +28,12 @@ type Config struct {
 		Cert    string `json:"cert"`
 		Certkey string `json:"certkey"`
 	} `json:"Cert"`
-	Auth struct {
+	Auth []struct {
 		Apikey     string `json:"apikey"`
 		User       string `json:"User"`
 		CREATEDATE string `json:"CREATEDATE"`
 	} `json:"Auth"`
-	MAXSTORAGE           int64 `json:"MAX_STORAGE"`
+	MAX_STORAGE          int64 `json:"MAX_STORAGE"`
 	DOWNLOAD_VULNREPOAPP bool  `json:"DOWNLOAD_VULNREPOAPP"`
 }
 
@@ -86,6 +88,61 @@ type ReportTemplate []struct {
 	Tags       []any  `json:"tags"`
 }
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
+var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890-")
+
+func randSeq(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
+}
+
+func configwizard() {
+
+	fmt.Println("Enter Your Name: ")
+	var username string
+	fmt.Scanln(&username)
+
+	current_time := time.Now().Local()
+	var fs []any
+
+	fs = append(fs, map[string]interface{}{
+		"apikey":     randSeq(20),
+		"User":       username,
+		"CREATEDATE": current_time.Format("2006-01-02"),
+	})
+	configtruct := map[string]interface{}{
+		"Server": map[string]interface{}{
+			"host": "localhost",
+			"port": "443",
+		},
+		"Cert": map[string]interface{}{
+			"cert":    "cert/cert.crt",
+			"certkey": "cert/cert.key",
+		},
+		"Auth":                 fs,
+		"MAX_STORAGE":          1000000000,
+		"DOWNLOAD_VULNREPOAPP": false,
+	}
+
+	b, err := json.Marshal(configtruct)
+	if err != nil {
+		log.Fatalf("Unable to marshal due to %s\n", err)
+	}
+
+	if err := ioutil.WriteFile("config.json", b, 0644); err != nil {
+		log.Panic(err)
+	}
+	fmt.Println("User password saved in config.json")
+	fmt.Println("Configuration file written successfully.")
+
+}
+
 func main() {
 
 	ex, err2 := os.Executable()
@@ -94,17 +151,19 @@ func main() {
 	}
 	exPath := filepath.Dir(ex) + "/"
 
-	file, _ := os.Open(exPath + "conf.json")
+	if _, err := os.Stat(exPath + "config.json"); err == nil || os.IsExist(err) {
+		// your code here if file exists
+	} else {
+		configwizard()
+	}
+
+	file, _ := os.Open(exPath + "config.json")
 	defer file.Close()
 	decoder := json.NewDecoder(file)
 	configuration := Config{}
 	err := decoder.Decode(&configuration)
 	if err != nil {
 		fmt.Println("error:", err)
-	}
-
-	if configuration.Auth.Apikey == "" {
-		log.Fatal("Empty api key, check conf.json!!!")
 	}
 
 	mux := http.NewServeMux()
@@ -121,7 +180,7 @@ func main() {
 		}
 
 		fileServer := http.FileServer(http.Dir("./vulnrepo-app/vulnrepo-build-prod-master/"))
-		
+
 		mux.Handle("/home/", http.StripPrefix("/home", fileServer))
 		mux.Handle("/my-reports/", http.StripPrefix("/my-reports", fileServer))
 		mux.Handle("/report/", http.StripPrefix("/report", fileServer))
@@ -141,7 +200,7 @@ func main() {
 
 	}
 
-	mux.HandleFunc("/api/", sayHello)
+	mux.HandleFunc("/api/", handleApi)
 
 	cfg := &tls.Config{
 		MinVersion:               tls.VersionTLS12,
@@ -311,7 +370,7 @@ func IsValidUUID(uuid string) bool {
 	return r.MatchString(uuid)
 }
 
-func sayHello(w http.ResponseWriter, r *http.Request) {
+func handleApi(w http.ResponseWriter, r *http.Request) {
 	ip := r.RemoteAddr
 	xforward := r.Header.Get("X-Forwarded-For")
 	logme(" | Connection from " + ip)
@@ -319,7 +378,7 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("X-Forwarded-For : ", xforward)
 	}
 
-	file, _ := os.Open("conf.json")
+	file, _ := os.Open("config.json")
 	defer file.Close()
 	decoder := json.NewDecoder(file)
 	configuration := Config{}
@@ -344,7 +403,22 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 	}
 
 	myAuth := r.Header.Get("Vulnrepo-Auth")
-	if configuration.Auth.Apikey == myAuth {
+
+	usraccess := false
+	authuser := ""
+	authcreatedate := ""
+
+	for i := range configuration.Auth {
+		if configuration.Auth[i].Apikey == myAuth {
+			// Found!
+			usraccess = true
+			authuser = configuration.Auth[i].User
+			authcreatedate = configuration.Auth[i].CREATEDATE
+			break
+		}
+	}
+
+	if usraccess {
 
 		Action := r.Header.Get("Vulnrepo-Action")
 		switch Action {
@@ -352,7 +426,22 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			//storage size
 			dirsize, _ := DirSize("./reports")
-			fmt.Fprintf(w, `{"AUTH": "OK", "WELCOME": "`+configuration.Auth.User+`", "CREATEDATE": "`+configuration.Auth.CREATEDATE+`", "EXPIRYDATE": "0", "CURRENT_STORAGE": "`+fmt.Sprint(dirsize)+`", "MAX_STORAGE": "`+fmt.Sprint(configuration.MAXSTORAGE)+`"}`)
+
+			welcomeStruct := map[string]interface{}{
+				"AUTH":            "OK",
+				"WELCOME":         authuser,
+				"CREATEDATE":      authcreatedate,
+				"EXPIRYDATE":      "0",
+				"CURRENT_STORAGE": fmt.Sprint(dirsize),
+				"MAX_STORAGE":     fmt.Sprint(configuration.MAX_STORAGE),
+			}
+
+			b, err := json.Marshal(welcomeStruct)
+			if err != nil {
+				log.Fatalf("Unable to marshal due to %s\n", err)
+			}
+
+			fmt.Fprintf(w, string(b))
 			logme(" | apiconnect from: " + ip)
 		case "getreportslist":
 			files, err := os.ReadDir("./reports/")
@@ -477,7 +566,7 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 				if err01 != nil {
 					log.Fatal(err01)
 				}
-				if dirsize > configuration.MAXSTORAGE {
+				if dirsize > configuration.MAX_STORAGE {
 					w.WriteHeader(http.StatusOK)
 					fmt.Fprintf(w, `{"STORAGE": "NOSPACE"}`)
 					break
@@ -576,7 +665,7 @@ func sayHello(w http.ResponseWriter, r *http.Request) {
 				if err23 != nil {
 					log.Fatal(err23)
 				}
-				if dirsize > configuration.MAXSTORAGE {
+				if dirsize > configuration.MAX_STORAGE {
 					w.WriteHeader(http.StatusOK)
 					fmt.Fprintf(w, `{"STORAGE": "NOSPACE"}`)
 					break
